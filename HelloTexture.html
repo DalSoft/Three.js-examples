@@ -209,18 +209,6 @@ function update()
 	// delta = change in time since last call
 	var delta = clock.getDelta(); 
 	var totalRunTime = clock.getElapsedTime();
-	
-	/*
-	// functionality provided by THREEx.KeyboardState.js
-	if ( keyboard.pressed("A") )
-		cube.rotation.y -= delta;
-	if ( keyboard.pressed("D") )
-		cube.rotation.y += delta;
-	if ( keyboard.pressed("W") )
-		cube.rotation.x -= delta;
-	if ( keyboard.pressed("S") )
-		cube.rotation.x += delta;
-		*/
 		
 	controls.update();
 	stats.update();
