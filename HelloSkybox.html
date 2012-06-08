@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>three.js tutorial - HelloCube</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body 
+		{
+			font-family: Monospace;
+			background-color: #ccccff;
+			margin: 0px;
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/THREEx.KeyboardState.js"></script>
+
+<script>
+/*
+	A three.js "tutorial by example"
+	introducing some basic features
+	to create a simple 3D scene.
+	Author: Lee Stemkoski
+	Date: June 2012 (three.js v49)
+ */
+	
+//////////	
+// MAIN //
+//////////
+
+if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+// standard global variables
+var container, stats, camera, controls, scene, renderer;
+var clock = new THREE.Clock();
+var keyboard = new THREEx.KeyboardState();
+// custom global variables
+var cube;
+
+// initialization
+init();
+
+// animation loop / game loop
+animate();
+
+///////////////
+// FUNCTIONS //
+///////////////
+			
+function init() 
+{
+    ///////////
+	// SCENE //
+	///////////
+	scene = new THREE.Scene();
+
+	////////////
+	// CAMERA //
+	////////////
+	
+	// set the view size in pixels or according to window size
+	// var WIDTH = 400, HEIGHT = 300;
+	var WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
+	// camera attributes
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 0.1, FAR = 10000;
+	
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	
+	// add the camera to the scene
+	scene.add(camera);
+	// the camera defaults to position (0,0,0)
+	// 	so pull it back and up and set the angle towards the scene origin
+	camera.position.z = 400;
+	camera.position.y = 150;	
+	camera.lookAt(scene.position);	
+
+	//////////////
+	// CONTROLS //
+	//////////////
+
+	// mouse buttons: left to rotate, middle to zoom, right to pan
+	controls = new THREE.TrackballControls( camera );
+	
+	//////////////
+	// RENDERER //
+	//////////////
+	
+	// create and start the renderer
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize(WIDTH, HEIGHT);
+
+	// create a div element to contain the renderer
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	// alternatively: if you insert the div via HTML, access it using
+	//   container = document.getElementById( 'container' );
+
+	// attach renderer to the container div
+	container.appendChild( renderer.domElement );
+	
+	///////////
+	// STATS //
+	///////////
+	
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	stats.domElement.style.zIndex = 100;
+	container.appendChild( stats.domElement );
+	
+	///////////
+	// LIGHT //
+	///////////
+	
+	// create a light
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(0,250,0);
+	scene.add(light);
+	
+	//////////////
+	// GEOMETRY //
+	//////////////
+		
+	// most objects displayed are a "mesh":
+	//  a collection of points ("geometry") and
+	//  a set of surface parameters ("material")	
+	
+	// to use multiple materials, cube constructor is slightly different
+	var cubeMat = [];
+	// order of materials: x+,x-,y+,y-,z+,z-
+	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0xff3333 } ) );
+	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0xff8800 } ) );
+	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0xffff33 } ) );
+	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0x33ff33 } ) );
+	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0x3333ff } ) );
+	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0x8833ff } ) );
+	cube = new THREE.Mesh( new THREE.CubeGeometry( 100, 100, 100, 1, 1, 1, cubeMat ), new THREE.MeshFaceMaterial() );
+	scene.add( cube );		
+
+	// axes
+	var object = new THREE.AxisHelper();
+	object.position.set( 0, 0, 0 );
+	object.scale.x = object.scale.y = object.scale.z = 1;
+	scene.add( object );
+
+	////////////
+	// SKYBOX //
+	////////////
+	
+	// urls of the images,
+        // one per half axis
+        var urls = [
+              'images/dawnmountain-xpos.png',
+              'images/dawnmountain-xneg.png',
+              'images/dawnmountain-ypos.png',
+              'images/dawnmountain-yneg.png',
+              'images/dawnmountain-zpos.png',
+              'images/dawnmountain-zneg.png'
+            ];
+
+        // wrap it up into the object that we need
+        var cubemap = THREE.ImageUtils.loadTextureCube(urls);
+
+        // set the format, likely RGB
+        // unless you've gone crazy
+        cubemap.format = THREE.RGBFormat;
+
+        // following code from https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap.html
+        var shader = THREE.ShaderUtils.lib[ "cube" ];
+        shader.uniforms[ "tCube" ].texture = cubemap;
+
+        var material = new THREE.ShaderMaterial( {
+
+          fragmentShader: shader.fragmentShader,
+          vertexShader: shader.vertexShader,
+          uniforms: shader.uniforms,
+          depthWrite: false
+
+        });
+
+        var skybox = new THREE.Mesh( new THREE.CubeGeometry( 1000, 1000, 1000 ), material );
+        skybox.flipSided = true;
+
+		scene.add(skybox);
+	
+
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function update()
+{
+	// delta = change in time since last call
+	var delta = clock.getDelta(); 
+	var totalRunTime = clock.getElapsedTime();
+	
+	// functionality provided by THREEx.KeyboardState.js
+	if ( keyboard.pressed("A") )
+		cube.rotation.y -= delta;
+	if ( keyboard.pressed("D") )
+		cube.rotation.y += delta;
+	if ( keyboard.pressed("W") )
+		cube.rotation.x -= delta;
+	if ( keyboard.pressed("S") )
+		cube.rotation.x += delta;
+		
+	controls.update();
+	stats.update();
+}
+
+function render() 
+{	
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>

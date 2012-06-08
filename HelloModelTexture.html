@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>three.js tutorial - HelloCube</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body 
+		{
+			font-family: Monospace;
+			background-color: #ccccff;
+			margin: 0px;
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/THREEx.KeyboardState.js"></script>
+
+<script>
+/*
+	A three.js "tutorial by example"
+	introducing some basic features
+	to create a simple 3D scene.
+	Author: Lee Stemkoski
+	Date: June 2012 (three.js v49)
+ */
+	
+//////////	
+// MAIN //
+//////////
+
+if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+// standard global variables
+var container, stats, camera, controls, scene, renderer;
+var clock = new THREE.Clock();
+var keyboard = new THREEx.KeyboardState();
+// custom global variables
+var cube;
+
+// initialization
+init();
+
+// animation loop / game loop
+animate();
+
+///////////////
+// FUNCTIONS //
+///////////////
+			
+function init() 
+{
+    ///////////
+	// SCENE //
+	///////////
+	scene = new THREE.Scene();
+
+	////////////
+	// CAMERA //
+	////////////
+	
+	// set the view size in pixels or according to window size
+	// var WIDTH = 400, HEIGHT = 300;
+	var WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
+	// camera attributes
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 0.1, FAR = 10000;
+	
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	
+	// add the camera to the scene
+	scene.add(camera);
+	// the camera defaults to position (0,0,0)
+	// 	so pull it back and up and set the angle towards the scene origin
+	camera.position.z = 400;
+	camera.position.y = 150;	
+	camera.lookAt(scene.position);	
+
+	//////////////
+	// CONTROLS //
+	//////////////
+
+	// mouse buttons: left to rotate, middle to zoom, right to pan
+	controls = new THREE.TrackballControls( camera );
+	
+	//////////////
+	// RENDERER //
+	//////////////
+	
+	// create and start the renderer
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize(WIDTH, HEIGHT);
+
+	// create a div element to contain the renderer
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	// alternatively: if you insert the div via HTML, access it using
+	//   container = document.getElementById( 'container' );
+
+	// attach renderer to the container div
+	container.appendChild( renderer.domElement );
+	
+	///////////
+	// STATS //
+	///////////
+	
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	stats.domElement.style.zIndex = 100;
+	container.appendChild( stats.domElement );
+	
+	///////////
+	// LIGHT //
+	///////////
+	
+	// create a light
+	var light = new THREE.PointLight(0xcccccc);
+	light.position.set(0,250,0);
+	scene.add(light);
+	
+	var ambientLight = new THREE.AmbientLight(0xcccccc);
+    scene.add(ambientLight);
+	//////////////
+	// GEOMETRY //
+	//////////////
+		
+	// most objects displayed are a "mesh":
+	//  a collection of points ("geometry") and
+	//  a set of surface parameters ("material")	
+		
+	var planeGeo = new THREE.PlaneGeometry(600, 600, 10, 10);
+	var planeMat = new THREE.MeshBasicMaterial({color: 0x330033});
+	var plane = new THREE.Mesh(planeGeo, planeMat);
+	plane.position.y = -100;
+	plane.doubleSided = true;
+	scene.add(plane);
+	
+	var cubeyGeo = new THREE.CubeGeometry( 10, 10, 10, 1, 1, 1 )
+	var cubeyMat = new THREE.MeshBasicMaterial( {color: 0x8888ff} );
+	var cubey = new THREE.Mesh(cubeyGeo, cubeyMat);
+	cubey.position.set(100,100,-100);
+	scene.add(cubey);
+		
+
+	////////////
+	// MODELS //
+	////////////
+		
+	// Note: if imported model textures appear too dark,
+	//   add an ambient light in this file (as above)
+	//   and increase values in model's exported .js file
+	//    to e.g. "colorAmbient" : [0.75, 0.75, 0.75]
+	var jsonLoader = new THREE.JSONLoader();
+	jsonLoader.load( "models/link.js", createScene );
+	
+	var object = new THREE.AxisHelper();
+	object.position.set( 0, 0, 0 );
+	object.scale.x = object.scale.y = object.scale.z = 1;
+	scene.add( object );
+}
+
+
+function createScene( geometry ) 
+{
+	var material = new THREE.MeshFaceMaterial();
+	var mesh = new THREE.Mesh( geometry, material );
+	mesh.scale.set(1,1,1);
+	scene.add( mesh );
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function update()
+{
+	// delta = change in time since last call
+	var delta = clock.getDelta(); 
+	var totalRunTime = clock.getElapsedTime();
+		
+	controls.update();
+	stats.update();
+}
+
+function render() 
+{	
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>
