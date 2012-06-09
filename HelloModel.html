@@ -120,8 +120,11 @@ function init()
 	
 	// create a light
 	var light = new THREE.PointLight(0xffffff);
-	light.position.set(0,250,0);
+	light.position.set(-100,100,200);
 	scene.add(light);
+
+	var ambientLight = new THREE.AmbientLight(0x333333);
+    scene.add(ambientLight);
 	
 	//////////////
 	// GEOMETRY //
@@ -149,8 +152,12 @@ function init()
 	// MODELS //
 	////////////
 	
+	// Note: if imported model appears too dark,
+	//   add an ambient light in this file (as above)
+	//   and increase values in model's exported .js file
+	//    to e.g. "colorAmbient" : [0.75, 0.75, 0.75]
 	var jsonLoader = new THREE.JSONLoader();
-	jsonLoader.load( "models/spaceship.js", createScene );
+	jsonLoader.load( "models/android.js", createScene );
 	
 	var object = new THREE.AxisHelper();
 	object.position.set( 0, 0, 0 );
@@ -163,7 +170,7 @@ function createScene( geometry )
 {
 	var material = new THREE.MeshFaceMaterial();
 	var mesh = new THREE.Mesh( geometry, material );
-	mesh.scale.set(50, 50, 50);
+	mesh.scale.set(10,10,10);
 	scene.add( mesh );
 }
 

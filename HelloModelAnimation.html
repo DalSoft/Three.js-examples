@@ -8,9 +8,8 @@
 		body 
 		{
 			font-family: Monospace;
-			font-weight: bold;
 			background-color: #ccccff;
-			margin: 5px;
+			margin: 0px;
 			overflow: hidden;
 		}
 	</style>
@@ -23,8 +22,6 @@
 <script src="js/Detector.js"></script>
 <script src="js/Stats.js"></script>
 <script src="js/THREEx.KeyboardState.js"></script>
-<script src="js/THREEx.FullScreen.js"></script>
-<script src="js/THREEx.WindowResize.js"></script>
 
 <script>
 /*
@@ -45,8 +42,6 @@ if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 var container, stats, camera, controls, scene, renderer;
 var clock = new THREE.Clock();
 var keyboard = new THREEx.KeyboardState();
-
-
 // custom global variables
 var cube;
 
@@ -87,8 +82,6 @@ function init()
 	camera.position.y = 150;	
 	camera.lookAt(scene.position);	
 
-	
-	
 	//////////////
 	// CONTROLS //
 	//////////////
@@ -113,16 +106,6 @@ function init()
 	// attach renderer to the container div
 	container.appendChild( renderer.domElement );
 	
-	
-	////////////
-	// EVENTS //
-	////////////
-
-	// automatically resize renderer
-	THREEx.WindowResize(renderer, camera);
-	// toggle full-screen on given key press
-	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
-	
 	///////////
 	// STATS //
 	///////////
@@ -139,8 +122,15 @@ function init()
 	
 	// create a light
 	var light = new THREE.PointLight(0xffffff);
-	light.position.set(0,250,0);
+	light.position.set(-100,100,200);
 	scene.add(light);
+
+	var light2 = new THREE.PointLight(0xffffff);
+	light2.position.set(100,100,-200);
+	scene.add(light2);
+	
+	var ambientLight = new THREE.AmbientLight(0x333333);
+    scene.add(ambientLight);
 	
 	//////////////
 	// GEOMETRY //
@@ -163,25 +153,46 @@ function init()
 	cubey.position.set(100,100,-100);
 	scene.add(cubey);
 	
-	// to use multiple materials, cube constructor is slightly different
-	var cubeMat = [];
-	// order of materials: x+,x-,y+,y-,z+,z-
-	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0xff3333 } ) );
-	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0xff8800 } ) );
-	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0xffff33 } ) );
-	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0x33ff33 } ) );
-	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0x3333ff } ) );
-	cubeMat.push( new THREE.MeshBasicMaterial( { color: 0x8833ff } ) );
-	cube = new THREE.Mesh( new THREE.CubeGeometry( 100, 100, 100, 1, 1, 1, cubeMat ), new THREE.MeshFaceMaterial() );
-	scene.add( cube );		
-
-	
-	
 	var object = new THREE.AxisHelper();
 	object.position.set( 0, 0, 0 );
 	object.scale.x = object.scale.y = object.scale.z = 1;
 	scene.add( object );
+	
+	
+	////////////
+	// MODELS //
+	////////////
+	
+	// Note: if imported model appears too dark,
+	//   add an ambient light in this file (as above)
+	//   and increase values in model's exported .js file
+	//    to e.g. "colorAmbient" : [0.75, 0.75, 0.75]	
+	
+	var jsonLoader = new THREE.JSONLoader();
+	jsonLoader.load( "models/android-animations.js", createScene );	
+}
 
+var android;
+// following code from http://catchvar.com/threejs-animating-blender-models
+	var animOffset = 0, // starting frame of animation
+	walking = false,
+	duration = 1000, // milliseconds to complete animation
+	keyframes = 20, // total number of animation frames
+	interpolation = duration / keyframes,
+	lastKeyframe = 0, currentKeyframe = 0;
+
+function createScene( geometry ) 
+{
+	for (var i = 0; i < geometry.materials.length; i++)
+	{
+		// geometry.materials[i].shading = THREE.FlatShading;
+		geometry.materials[i].morphTargets = true;
+	}
+	
+	var material = new THREE.MeshFaceMaterial();
+	android = new THREE.Mesh( geometry, material );
+	android.scale.set(10,10,10);
+	scene.add( android );
 }
 
 function animate() 
@@ -197,27 +208,37 @@ function update()
 	var delta = clock.getDelta(); 
 	var totalRunTime = clock.getElapsedTime();
 	
-	// functionality provided by THREEx.KeyboardState.js
+	// document.getElementById('message').innerHTML = ' Hello world how are you today? Press a button... ' + time + " : " + keyframe ;		
 	if ( keyboard.pressed("A") )
-		cube.rotation.y -= delta;
+		document.getElementById('message').innerHTML = ' Have an Awesome day! ';	
 	if ( keyboard.pressed("D") )
-		cube.rotation.y += delta;
-	if ( keyboard.pressed("W") )
-		cube.rotation.x -= delta;
-	if ( keyboard.pressed("S") )
-		cube.rotation.x += delta;
-		
-	if ( keyboard.pressed("1") )
-		document.getElementById('message').innerHTML = ' Have a nice day! - 1';	
-	if ( keyboard.pressed("2") )
-		document.getElementById('message').innerHTML = ' Have a nice day! - 2 ';	
-		
+		document.getElementById('message').innerHTML = ' Have a Delightful day! ';	
+
 	controls.update();
 	stats.update();
 }
 
+var time, keyframe;
+
 function render() 
 {	
+	if ( android ) // exists / is loaded 
+	{
+		// Alternate morph targets
+		time = new Date().getTime() % duration;
+		keyframe = Math.floor( time / interpolation ) + animOffset;
+		if ( keyframe != currentKeyframe ) 
+		{
+			android.morphTargetInfluences[ lastKeyframe ] = 0;
+			android.morphTargetInfluences[ currentKeyframe ] = 1;
+			android.morphTargetInfluences[ keyframe ] = 0;
+			lastKeyframe = currentKeyframe;
+			currentKeyframe = keyframe;
+		}
+		android.morphTargetInfluences[ keyframe ] = ( time % interpolation ) / interpolation;
+		android.morphTargetInfluences[ lastKeyframe ] = 1 - android.morphTargetInfluences[ keyframe ];
+	}
+
 	renderer.render( scene, camera );
 }
 
