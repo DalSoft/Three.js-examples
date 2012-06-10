@@ -49,6 +49,8 @@ var keyboard = new THREEx.KeyboardState();
 
 // custom global variables
 var cube;
+var leftTarget, rightTarget;
+var targets;
 
 // initialization
 init();
@@ -159,13 +161,18 @@ function init()
 	axes.scale.set(1, 1, 1);
 	scene.add( axes );
 	
-	var cubeyGeometry = new THREE.CubeGeometry( 10, 10, 10, 1, 1, 1 )
+	var cubeyGeometry = new THREE.CubeGeometry( 10, 100, 100, 1, 1, 1 )
 	var cubeyMaterial = new THREE.MeshLambertMaterial( {color: 0x8888ff} );
-	var cubey = new THREE.Mesh(cubeyGeometry, cubeyMaterial);
-	cubey.position.set(100, 100, -100);
-	scene.add(cubey);
 	
-	// to use multiple materials, cube constructor is slightly different
+	leftTarget = new THREE.Mesh(cubeyGeometry, cubeyMaterial);
+	leftTarget.position.set(-150, 0, 0);
+	scene.add(leftTarget);
+	rightTarget = new THREE.Mesh(cubeyGeometry, cubeyMaterial);
+	rightTarget.position.set(150, 0, 0);
+	scene.add(rightTarget);
+	targets = [leftTarget, rightTarget];
+	
+	/* to use multiple materials, cube constructor is slightly different
 	var cubeMaterialArray = [];
 	// order of materials: x+,x-,y+,y-,z+,z-
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0xff3333 } ) );
@@ -174,7 +181,10 @@ function init()
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x33ff33 } ) );
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x3333ff } ) );
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x8833ff } ) );
-	cube = new THREE.Mesh( new THREE.CubeGeometry( 100, 100, 100, 1, 1, 1, cubeMaterialArray ), new THREE.MeshFaceMaterial() );
+	*/
+	
+	var wireMaterial = new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: true, transparent: true } );
+	cube = new THREE.Mesh( new THREE.CubeGeometry( 64, 64, 64, 1, 1, 1, wireMaterial ), new THREE.MeshFaceMaterial() );
 	scene.add( cube );		
 
 }
@@ -192,21 +202,57 @@ function update()
 	var delta = clock.getDelta(); 
 	var totalRunTime = clock.getElapsedTime();
 	
-	// functionality provided by THREEx.KeyboardState.js
-	if ( keyboard.pressed("A") )
-		cube.rotation.y -= delta;
-	if ( keyboard.pressed("D") )
-		cube.rotation.y += delta;
+	// keyboard functions in THREEx.KeyboardState.js
+
+	var moveDistance = 100 * delta;
+	
+	// local coordinates
+	
+	// move forwards / backwards
 	if ( keyboard.pressed("W") )
-		cube.rotation.x -= delta;
+		cube.translateZ( -moveDistance );
 	if ( keyboard.pressed("S") )
-		cube.rotation.x += delta;
-		
-	if ( keyboard.pressed("1") )
-		document.getElementById('message').innerHTML = ' Have a nice day! - 1';	
-	if ( keyboard.pressed("2") )
-		document.getElementById('message').innerHTML = ' Have a nice day! - 2 ';	
-		
+		cube.translateZ(  moveDistance );
+	// rotate left/right
+	if ( keyboard.pressed("A") )
+		cube.rotation.y += delta;
+	if ( keyboard.pressed("D") )
+		cube.rotation.y -= delta;
+	// strafe left / right
+	if ( keyboard.pressed("Q") )
+		cube.translateX( -moveDistance );
+	if ( keyboard.pressed("E") )
+		cube.translateX(  moveDistance );
+
+	// global coordinates
+	
+	if ( keyboard.pressed("left") )
+		cube.position.x -= moveDistance;
+	if ( keyboard.pressed("right") )
+		cube.position.x += moveDistance;
+	if ( keyboard.pressed("up") )
+		cube.position.z -= moveDistance;
+	if ( keyboard.pressed("down") )
+		cube.position.z += moveDistance;
+	
+	// collision detection:
+	//   determines if any of the rays from the cube's origin to each vertex
+	//		intersects anything in the array of target meshes
+	//   for increased collision accuracy, add more vertices to the cube;
+	//		for example, new THREE.CubeGeometry( 64, 64, 64, 8, 8, 8, wireMaterial )
+	var originPoint = new THREE.Vector3( cube.position.x, cube.position.y, cube.position.z );
+	document.getElementById('message').innerHTML = '  No collision detected... ';
+	for (var vertexIndex = 0; vertexIndex < cube.geometry.vertices.length; vertexIndex++)
+	{
+		// calculate the rotated vector
+		var directionVector = cube.localToWorld( cube.geometry.vertices[vertexIndex].clone() ).subSelf( cube.position );
+		var ray = new THREE.Ray( originPoint, directionVector.clone().normalize() );
+		var collisionResults = ray.intersectObjects( targets );
+		if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() ) 
+		{
+			document.getElementById('message').innerHTML = '  A vertex ray hit one of the targets... ';
+		}	
+	}
 	controls.update();
 	stats.update();
 }
@@ -215,6 +261,13 @@ function render()
 {	
 	renderer.render( scene, camera );
 }
+
+
+function vectorToString(v)
+{
+	return "(" + v.x + "," + v.y + "," + v.z + ")";
+}
+
 
 </script>
 
