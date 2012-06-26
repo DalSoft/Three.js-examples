@@ -49,6 +49,8 @@ var keyboard = new THREEx.KeyboardState();
 
 // custom global variables
 var cube;
+var mirrorCube, mirrorCubeCamera; // for mirror material
+var mirrorSphere, mirrorSphereCamera; // for mirror material
 
 // initialization
 init();
@@ -75,7 +77,7 @@ function init()
 	// var WIDTH = 400, HEIGHT = 300;
 	var WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
 	// camera attributes
-	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 0.1, FAR = 20000;
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 0.1, FAR = 2000;
 	
 	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
 	
@@ -83,8 +85,8 @@ function init()
 	scene.add(camera);
 	// the camera defaults to position (0,0,0)
 	// 	so pull it back and up and set the angle towards the scene origin
-	camera.position.z = 400;
-	camera.position.y = 150;	
+	camera.position.z = 40;
+	camera.position.y = 15;	
 	camera.lookAt(scene.position);	
 
 	//////////////
@@ -99,7 +101,7 @@ function init()
 	//////////////
 	
 	// create and start the renderer
-	renderer = new THREE.WebGLRenderer();
+	renderer = new THREE.WebGLRenderer( {antialias: true} );
 	renderer.setSize(WIDTH, HEIGHT);
 
 	// create a div element to contain the renderer
@@ -136,9 +138,10 @@ function init()
 	
 	// create a light
 	var light = new THREE.PointLight(0xffffff);
-	light.position.set(0,250,0);
+	light.position.set(0,25,0);
 	scene.add(light);
 	
+				
 	//////////////
 	// GEOMETRY //
 	//////////////
@@ -146,23 +149,74 @@ function init()
 	// most objects displayed are a "mesh":
 	//  a collection of points ("geometry") and
 	//  a set of surface parameters ("material")	
+			
+	
+	////////////////////
+	// MIRROR OBJECTS //
+	////////////////////
+	
+	var cubeGeom = new THREE.CubeGeometry(2, 2, 2, 1, 1, 1);
+	mirrorCubeCamera = new THREE.CubeCamera( 0.1, 1000, 512 );
+	// mirrorCubeCamera.renderTarget.minFilter = THREE.LinearMipMapLinearFilter;
+	scene.add( mirrorCubeCamera );
+	var mirrorCubeMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorCubeCamera.renderTarget } );
+	mirrorCube = new THREE.Mesh( cubeGeom, mirrorCubeMaterial );
+	mirrorCube.position.set(-5,2,-5);
+	mirrorCubeCamera.position = mirrorCube.position; // link references so they are always in sync
+	scene.add(mirrorCube);
+	
+	var wireframeTexture = new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: true, wireframeLinewidth: 2 } );
+	var wireframeCube = new THREE.Mesh( THREE.GeometryUtils.clone(cubeGeom), wireframeTexture );
+	wireframeCube.position = mirrorCube.position;
+	wireframeCube.scale.set(1.01,1.01,1.01);
+	scene.add( wireframeCube );		
+	
+	var sphereGeom =  new THREE.SphereGeometry( 2, 32, 16 ); // radius, segmentsWidth, segmentsHeight
+	mirrorSphereCamera = new THREE.CubeCamera( 0.1, 1000, 512 );
+	// mirrorCubeCamera.renderTarget.minFilter = THREE.LinearMipMapLinearFilter;
+	scene.add( mirrorSphereCamera );
+	var mirrorSphereMaterial = new THREE.MeshBasicMaterial( { envMap: mirrorSphereCamera.renderTarget } );
+	mirrorSphere = new THREE.Mesh( sphereGeom, mirrorSphereMaterial );
+	mirrorSphere.position.set(5,2,-5);
+	mirrorSphereCamera.position = mirrorSphere.position; // link references so they are always in sync
+	scene.add(mirrorSphere);
+	
+	var wireframeSphere = new THREE.Mesh( THREE.GeometryUtils.clone(sphereGeom), wireframeTexture );
+	wireframeSphere.position = mirrorSphere.position;
+	wireframeSphere.scale.set(1.01,1.01,1.01);
+	scene.add( wireframeSphere );	
+	
+	/*
+	
+	Good solution: create an object3d.  attach sphere, camera, wireframe to it.  Traverse this object when hiding stuff
+		to do mirror render pass.
+	
+	var visible = false;
+	THREE.SceneUtils.traverseHierarchy(parent, function(child) {
+        child.visible = visible;
+	});
+	*/
 		
-	var planeGeometry = new THREE.PlaneGeometry(600, 600, 10, 10);
-	var planeMaterial = new THREE.MeshLambertMaterial({color: 0xFFFFFF});
+		
+		
+	var planeGeometry = new THREE.PlaneGeometry(60, 60, 10, 10);
+	var planeMaterial = new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'images/crate.gif' ) });
 	var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-	plane.position.y = -100;
+	plane.position.y = -0.1;
 	plane.doubleSided = true;
 	scene.add(plane);
+	
+	
 	
 	var axes = new THREE.AxisHelper();
 	axes.position.set( 0, 0, 0 );
 	axes.scale.set(1, 1, 1);
 	scene.add( axes );
 	
-	var cubeyGeometry = new THREE.CubeGeometry( 10, 10, 10, 1, 1, 1 )
+	var cubeyGeometry = new THREE.CubeGeometry( 1, 1, 1, 1, 1, 1 )
 	var cubeyMaterial = new THREE.MeshLambertMaterial( {color: 0x8888ff} );
 	var cubey = new THREE.Mesh(cubeyGeometry, cubeyMaterial);
-	cubey.position.set(100, 100, -100);
+	cubey.position.set(10, 10, -10);
 	scene.add(cubey);
 	
 	// to use multiple materials, cube constructor is slightly different
@@ -174,13 +228,14 @@ function init()
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x33ff33 } ) );
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x3333ff } ) );
 	cubeMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x8833ff } ) );
-	cube = new THREE.Mesh( new THREE.CubeGeometry( 100, 100, 100, 1, 1, 1, cubeMaterialArray ), new THREE.MeshFaceMaterial() );
+	cube = new THREE.Mesh( new THREE.CubeGeometry( 1, 1, 1, 1, 1, 1, cubeMaterialArray ), new THREE.MeshFaceMaterial() );
+	cube.position.set(0,2,4);
 	scene.add( cube );		
 	
 	// without skybox, background color is determined by webpage background
-	var skyBox = new THREE.Mesh( new THREE.CubeGeometry( 10000, 10000, 10000, 1, 1, 1, cubeMaterialArray), new THREE.MeshFaceMaterial() );
-    // skyBox.flipSided = true;
-	skyBox.doubleSided = true;
+	var skyBox = new THREE.Mesh( new THREE.CubeGeometry( 1000, 1000, 1000 ), new THREE.MeshBasicMaterial( { color: 0x666699 } ) );
+    skyBox.flipSided = true;
+	// skyBox.doubleSided = true;
 	scene.add(skyBox);
 
 }
@@ -200,13 +255,17 @@ function update()
 	
 	// functionality provided by THREEx.KeyboardState.js
 	if ( keyboard.pressed("A") )
-		cube.rotation.y -= delta;
+		cube.position.x -= delta;
 	if ( keyboard.pressed("D") )
-		cube.rotation.y += delta;
+		cube.position.x += delta;
 	if ( keyboard.pressed("W") )
-		cube.rotation.x -= delta;
+		cube.position.z -= delta;
 	if ( keyboard.pressed("S") )
-		cube.rotation.x += delta;
+		cube.position.z += delta;
+	if ( keyboard.pressed("R") )
+		cube.position.y += delta;
+	if ( keyboard.pressed("F") )
+		cube.position.y -= delta;
 		
 	if ( keyboard.pressed("1") )
 		document.getElementById('message').innerHTML = ' Have a nice day! - 1';	
@@ -219,6 +278,14 @@ function update()
 
 function render() 
 {	
+	mirrorCube.visible = false;
+	mirrorCubeCamera.updateCubeMap( renderer, scene );
+	mirrorCube.visible = true;
+
+	mirrorSphere.visible = false;
+	mirrorSphereCamera.updateCubeMap( renderer, scene );
+	mirrorSphere.visible = true;
+	
 	renderer.render( scene, camera );
 }
 
